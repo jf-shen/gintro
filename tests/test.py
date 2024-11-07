@@ -1,8 +1,11 @@
-from gintro import Stream
+from gintro import Stream, timeit
 
 
 a = [1,2,3]
-b = Stream(a).map(lambda x: x * 2).tolist()
 
-print(b)
+@timeit
+def double(a):
+     return Stream(a).map(lambda x: x * 2).tolist()
+
+print(double(a))
 
