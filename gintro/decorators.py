@@ -1,6 +1,10 @@
 import time
 
 
+def smart_time(sec):
+    pass
+
+
 def timeit(fn):
     def wrapper(*args, **kwargs):
         start_time = time.time()
