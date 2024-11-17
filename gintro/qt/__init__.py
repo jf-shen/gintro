@@ -1,1 +1,1 @@
-from .akshare_data import get_stock_pool, get_succ_list
+from .akshare_data import get_stock_pool, DailyHistUpdater

@@ -20,7 +20,7 @@ def get_stock_pool():
     return df_stock
 
 
-class DailyHistDownloader:
+class DailyHistUpdater:
     def __init__(self,
                  path,
                  end_date=None):
@@ -46,9 +46,9 @@ class DailyHistDownloader:
         self.total_num = -1
         self.verbose = False  # 是否打印每只股票的log
 
+
     def log_level(self, level):
         self.logger.log_level = level
-
 
 
     def get_succ_list(self):
@@ -154,6 +154,7 @@ class DailyHistDownloader:
                     self.logger.info(f'[{fn.__name__}] process_num = {process_num}, \
                         time_per_item = %.2f' % time_per_item)
                     last_print_time = time.time()
+
 
     @timeit
     def multi_process(self, df, fn, max_workers=10):

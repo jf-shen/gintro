@@ -11,6 +11,7 @@ gintro.egg-info/SOURCES.txt
 gintro.egg-info/dependency_links.txt
 gintro.egg-info/top_level.txt
 gintro/qt/__init__.py
+gintro/qt/akshare_data.py
 gintro/qt/basic.py
 tests/__init__.py
 tests/test.py
