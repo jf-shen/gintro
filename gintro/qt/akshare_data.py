@@ -42,12 +42,13 @@ class DailyHistDownloader:
 
         # log
         self.logger = Logger()
-        self.log_gap = 3
+        self.print_gap = 3
         self.total_num = -1
         self.verbose = False  # 是否打印每只股票的log
 
     def log_level(self, level):
         self.logger.log_level = level
+
 
 
     def get_succ_list(self):
@@ -126,6 +127,13 @@ class DailyHistDownloader:
               (time.time() - start_time))
 
 
+    def update(self, df, workers=1):
+        if workers > 1:
+            self.multi_process(df, fn=self.update_daily_hist)
+        else:
+            self.process(df, fn=self.update_daily_hist)
+
+
     @timeit
     def process(self, df, fn):
         start_time = time.time()
@@ -142,30 +150,36 @@ class DailyHistDownloader:
                 time_per_item = (time.time() - start_time) / process_num
 
                 # 隔一段时间打印日志
-                if time.time() - last_print_time > self.log_gap:
+                if time.time() - last_print_time > self.print_gap:
                     self.logger.info(f'[{fn.__name__}] process_num = {process_num}, \
                         time_per_item = %.2f' % time_per_item)
                     last_print_time = time.time()
 
     @timeit
-    def multi_process(self, df_stock, fn, max_workers=10):
+    def multi_process(self, df, fn, max_workers=10):
+        start_time = time.time()
+        last_print_time = start_time
         logger = self.logger
+
+        self.total_num = df.shape[0]
+        self.succ_list = self.get_succ_list()
+        process_num = 0
+
         logger.info('multi-thread mode, worker = %i' % max_workers)
 
-
-        start_time = time.time()
-        process_num = 0
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(fn, row, i) for i, row in df_stock.iterrows()]
+            futures = [executor.submit(fn, row, i) for i, row in df.iterrows()]
             for future in as_completed(futures):
                 try:
                     result = future.result()
                     if result != -1:
                         process_num += 1
                         time_per_item = (time.time() - start_time) / process_num
-                        print(f'process_num = {process_num}, time_per_item = {time_per_item}')
+                        if time.time() - last_print_time > self.print_gap:
+                            logger.info(f'process_num = {process_num}, time_per_item = {time_per_item}')
+                            last_print_time = time.time()
                 except Exception as exc:
-                    print(f"发生异常: {exc}")
+                    logger.error(f"发生异常: {exc}")
 
 
 # process(df_stock, fn=update_daily_hist)
