@@ -96,12 +96,12 @@ class DailyHistUpdater:
         end_date = self.end_date
 
         if start_date > end_date:
-            logger.warn(f"skip {code}.{exchange} since start_date >= end_date: \
-                    start_date = {start_date}, end_date = {end_date}")
+            logger.warn(f"skip {code}.{exchange} since start_date >= end_date: "
+                        f"start_date = {start_date}, end_date = {end_date}")
             return
 
-        logger.debug(f'[{i + 1}/{self.total_num}] start updating {name}: {code}, \
-            date_range = [{start_date} ~ {end_date}]')
+        logger.debug(f'[{i + 1}/{self.total_num}] start updating {name}: {code}, '
+                     f'date_range = [{start_date} ~ {end_date}]')
         symbol = exchange + code
         try:
             df_incr = ak.stock_zh_a_hist_tx(
@@ -110,9 +110,9 @@ class DailyHistUpdater:
                 end_date=end_date,
                 adjust="qfq"
             )
-        except:
-            raise RpcException(f'[akshare error] symbol = {symbol}, start_date = {start_date}, \
-                            end_date = {end_date}')
+        except Exception as e:
+            raise RpcException(f'[akshare error] symbol = {symbol}, start_date = {start_date}, '
+                               f'end_date = {end_date}, Exception = {e}')
 
         df_incr['code'] = code
         df_incr['名称'] = name
@@ -133,9 +133,8 @@ class DailyHistUpdater:
                 fp.flush()
                 fp.close()
 
-        logger.debug(f'[{i + 1}/{self.total_num}] finish downloading {name}: {code}, time elapsed = %.2fs' %
-              (time.time() - start_time))
-
+        logger.debug(f'[{i + 1}/{self.total_num}] finish downloading {name}: {code}, '
+                     f'time elapsed = %.2fs' % (time.time() - start_time))
 
     def update(self, df, workers=1):
         if workers > 1:

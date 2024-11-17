@@ -22,7 +22,7 @@ class Logger:
         self.log_level = Log(log_level)
 
     def print(self, msg, log_level=Log.INFO):
-        if self.log_level.value >= Log(log_level).value:
+        if Log(log_level).value >= self.log_level.value:
             print(msg)
 
     def debug(self, msg):
