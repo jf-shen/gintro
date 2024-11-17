@@ -4,6 +4,9 @@ import threading
 import pandas as pd
 import time
 import os
+
+from google.protobuf.service import RpcException
+
 import gintro.date as gd
 from gintro import timeit
 from .basic import Logger
@@ -29,13 +32,15 @@ class DailyHistUpdater:
         self.data_path = os.path.join(path, 'data')
         self.status_path = os.path.join(path, 'status')
 
+        os.makedirs(self.data_path, exist_ok=True)
+        os.makedirs(self.status_path, exist_ok=True)
+
         # end_date are not allowed to reset
         self.end_date = gd.today() if (end_date is None) else end_date
         self.status_file = os.path.join(self.status_path, self.end_date)  # 存储已经执行成功的stock code
 
         # data files
         self.succ_list = []
-
 
         # multi-threading
         self.file_lock = threading.Lock()
@@ -98,12 +103,17 @@ class DailyHistUpdater:
         logger.debug(f'[{i + 1}/{self.total_num}] start updating {name}: {code}, \
             date_range = [{start_date} ~ {end_date}]')
         symbol = exchange + code
-        df_incr = ak.stock_zh_a_hist_tx(
-            symbol=symbol,
-            start_date=start_date,
-            end_date=end_date,
-            adjust="qfq"
-        )
+        try:
+            df_incr = ak.stock_zh_a_hist_tx(
+                symbol=symbol,
+                start_date=start_date,
+                end_date=end_date,
+                adjust="qfq"
+            )
+        except:
+            raise RpcException(f'[akshare error] symbol = {symbol}, start_date = {start_date}, \
+                            end_date = {end_date}')
+
         df_incr['code'] = code
         df_incr['名称'] = name
         df_incr['exchange'] = exchange
