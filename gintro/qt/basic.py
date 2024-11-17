@@ -19,10 +19,10 @@ class Log(Enum):
 
 class Logger:
     def __init__(self, log_level=Log.INFO):
-        self.log_level = log_level
+        self.log_level = Log(log_level)
 
     def print(self, msg, log_level=Log.INFO):
-        if self.log_level >= log_level:
+        if self.log_level.value >= Log(log_level).value:
             print(msg)
 
     def debug(self, msg):

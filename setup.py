@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='gintro',
-    version='0.1.7',
+    version='0.1.9',
     author='jfshen',
     packages=find_packages(),
     install_requires=[
