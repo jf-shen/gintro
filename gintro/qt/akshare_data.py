@@ -123,7 +123,7 @@ class DailyHistUpdater:
         else:
             df = pd.concat([df, df_incr], axis=0)
 
-        Logger.debug(f'[{i + 1}/{self.total_num}] save to path = {save_path}')
+        logger.debug(f'[{i + 1}/{self.total_num}] save to path = {save_path}')
         df.to_csv(save_path, encoding='utf_8_sig')
 
         # 使用锁来同步写入操作
@@ -186,7 +186,8 @@ class DailyHistUpdater:
                         process_num += 1
                         time_per_item = (time.time() - start_time) / process_num
                         if time.time() - last_print_time > self.print_gap:
-                            logger.info(f'process_num = {process_num}, time_per_item = {time_per_item}')
+                            logger.info(f'process_num = {process_num}/{self.total_num}, '
+                                        f'time_per_item = {time_per_item}')
                             last_print_time = time.time()
                 except Exception as exc:
                     logger.error(f"发生异常: {exc}")
