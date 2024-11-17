@@ -6,6 +6,7 @@ import time
 import os
 import gintro.date as gd
 from gintro import timeit
+from .basic import Logger
 
 
 # get stock pool
@@ -24,25 +25,29 @@ class DailyHistDownloader:
                  path,
                  end_date=None):
 
-        self.path = path
+        self.path = path   # 所有文件相关的操作在该目录下进行
         self.data_path = os.path.join(path, 'data')
         self.status_path = os.path.join(path, 'status')
 
-        # set value in self.set_end_date()
-        self.end_date = None
-        self.status_file = None
-        self.set_end_date(end_date)
+        # end_date are not allowed to reset
+        self.end_date = gd.today() if (end_date is None) else end_date
+        self.status_file = os.path.join(self.status_path, self.end_date)  # 存储已经执行成功的stock code
 
         # data files
-        self.data_files = os.listdir(self.data_path)
+        self.succ_list = []
 
-        self.time_lag = 3
+
+        # multi-threading
+        self.file_lock = threading.Lock()
+
+        # log
+        self.logger = Logger()
+        self.log_gap = 3
         self.total_num = -1
+        self.verbose = False  # 是否打印每只股票的log
 
-
-    def set_end_date(self, end_date):
-        self.end_date = gd.today() if (end_date is None) else end_date
-        self.status_file = os.path.join(self.status_path, self.end_date)
+    def log_level(self, level):
+        self.logger.log_level = level
 
 
     def get_succ_list(self):
@@ -52,46 +57,30 @@ class DailyHistDownloader:
                 data = f.read()
                 succ_list = data.strip().split('\n')
                 succ_list = list(set(succ_list))
-                print('len(succ_list) = %i' % len(succ_list))
+                self.logger.info('len(succ_list) = %i' % len(succ_list))
                 f.close()
         else:
-            print(f"status file doesn't exists: {self.status_file}")
-
+            self.logger.warn(f"status file doesn't exists: {self.status_file}")
         return succ_list
-
-
-    @timeit
-    def process(self, df, fn):
-        start_time = time.time()
-        last_print_time = start_time
-
-        process_num = 0
-        self.total_num = df.shape[0]
-
-        for i, row in df.iterrows():
-            result = fn(row, i)
-
-            if result != -1:
-                process_num += 1
-                time_per_item = (time.time() - start_time) / process_num
-
-                if time.time() - last_print_time > self.time_lag:
-                    print(f'[{fn.__name__}] process_num = {process_num}, time_per_item = %.2f' % time_per_item)
-                    last_print_time = time.time()
 
 
     def update_daily_hist(self, row, i):
         # TODO: 判断start_date和end_date之间是否是trade_day，如果不是直接跳过查询
         start_time = time.time()
+        logger = self.logger
+
         code = row['代码']
         exchange = row['exchange']
         name = row['名称']
+
+        if code in self.succ_list:
+            return
 
         file_name = f'{code}.csv'
         save_path = f'{self.data_path}/{code}.csv'
 
         df = None
-        if file_name in self.data_files:
+        if file_name in os.listdir(self.data_path):
             df = pd.read_csv(save_path, index_col=0)
             max_date = df['date'].max()
             start_date = gd.date_plus(max_date.replace('-', ''), 1)
@@ -101,10 +90,12 @@ class DailyHistDownloader:
         end_date = self.end_date
 
         if start_date > end_date:
-            print(f"skip {code}.{exchange} since start_date >= end_date: start_date = {start_date}, end_date = {end_date}")
+            logger.warn(f"skip {code}.{exchange} since start_date >= end_date: \
+                    start_date = {start_date}, end_date = {end_date}")
             return
 
-        print(f'[{i + 1}/{self.total_num}] start updating {name}: {code}, date_range = [{start_date} ~ {end_date}]')
+        logger.debug(f'[{i + 1}/{self.total_num}] start updating {name}: {code}, \
+            date_range = [{start_date} ~ {end_date}]')
         symbol = exchange + code
         df_incr = ak.stock_zh_a_hist_tx(
             symbol=symbol,
@@ -124,38 +115,60 @@ class DailyHistDownloader:
         print(f'[{i + 1}/{self.total_num}] save to path = {save_path}')
         df.to_csv(save_path, encoding='utf_8_sig')
 
-        file_lock = threading.Lock()
         # 使用锁来同步写入操作
-        with file_lock:
+        with self.file_lock:
             with open(self.status_file, 'a+') as fp:
                 fp.write(code + '\n')
                 fp.flush()
                 fp.close()
 
-        print(f'[{i + 1}/{self.total_num}] finish downloading {name}: {code}, time elasped = %.2fs' %
+        logger.debug(f'[{i + 1}/{self.total_num}] finish downloading {name}: {code}, time elapsed = %.2fs' %
               (time.time() - start_time))
 
 
-# ================= 我是分割线 ============= #
+    @timeit
+    def process(self, df, fn):
+        start_time = time.time()
+        last_print_time = start_time
 
-def multi_process(df_stock, fn, max_workers=10):
-    print('multi-thread mode, worker = %i' % max_workers)
-    start_time = time.time()
-    process_num = 0
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(fn, row, i) for i, row in df_stock.iterrows()]
-        for future in as_completed(futures):
-            try:
-                result = future.result()
-                if result != -1:
-                    process_num += 1
-                    time_per_item = (time.time() - start_time) / process_num
-                    print(f'process_num = {process_num}, time_per_item = {time_per_item}')
-            except Exception as exc:
-                print(f"发生异常: {exc}")
+        process_num = 0
+        self.total_num = df.shape[0]
+        self.succ_list = self.get_succ_list()
+
+        for i, row in df.iterrows():
+            result = fn(row, i)
+            if result != -1:
+                process_num += 1
+                time_per_item = (time.time() - start_time) / process_num
+
+                # 隔一段时间打印日志
+                if time.time() - last_print_time > self.log_gap:
+                    self.logger.info(f'[{fn.__name__}] process_num = {process_num}, \
+                        time_per_item = %.2f' % time_per_item)
+                    last_print_time = time.time()
+
+    @timeit
+    def multi_process(self, df_stock, fn, max_workers=10):
+        logger = self.logger
+        logger.info('multi-thread mode, worker = %i' % max_workers)
+
+
+        start_time = time.time()
+        process_num = 0
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(fn, row, i) for i, row in df_stock.iterrows()]
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                    if result != -1:
+                        process_num += 1
+                        time_per_item = (time.time() - start_time) / process_num
+                        print(f'process_num = {process_num}, time_per_item = {time_per_item}')
+                except Exception as exc:
+                    print(f"发生异常: {exc}")
 
 
 # process(df_stock, fn=update_daily_hist)
-multi_process(df_stock, fn=update_daily_hist, max_workers=10)
+# multi_process(df_stock, fn=update_daily_hist, max_workers=10)
 
 
