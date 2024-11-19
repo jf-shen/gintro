@@ -70,6 +70,44 @@ class DailyHistUpdater:
         return succ_list
 
 
+    def download_daily_hist(self, row, i):
+        logger = self.logger
+        start_time = time.time()
+        code = row['代码']
+        exchange = row['exchange']
+        name = row['名称']
+        if code in self.succ_list:
+            logger.debug(f'{name}: {code} is succ, download next')
+            return -1
+
+        logger.debug(f'[{i + 1}/{self.total_num}] start downloading {name}: {code}')
+        symbol = exchange + code
+        df = ak.stock_zh_a_hist_tx(
+            symbol=symbol,
+            end_date=self.end_date,
+            adjust="qfq"
+        )
+        df['code'] = code
+        df['名称'] = name
+        df['exchange'] = exchange
+        save_path = f"{self.data_path}/{code}.csv"
+
+        logger.debug(f'[{i + 1}/{self.total_num}] save to path = {save_path}')
+        df.to_csv(f'{self.data_path}/{code}.csv', encoding='utf_8_sig')
+
+        # 使用锁来同步写入操作
+        with self.file_lock:
+            with open(self.status_file, 'a+') as fp:
+                fp.write(code + '\n')
+                fp.flush()
+                fp.close()
+
+        logger.debug(f'[{i + 1}/{self.total_num}] finish downloading {name}: {code}, time elapsed = %.2f' %
+              (time.time() - start_time))
+
+        return 1
+
+
     def update_daily_hist(self, row, i):
         # TODO: 判断start_date和end_date之间是否是trade_day，如果不是直接跳过查询
         start_time = time.time()
@@ -80,7 +118,8 @@ class DailyHistUpdater:
         name = row['名称']
 
         if code in self.succ_list:
-            return
+            logger.debug(f'{name}: {code} is succ, update next')
+            return -1
 
         file_name = f'{code}.csv'
         save_path = f'{self.data_path}/{code}.csv'
@@ -135,12 +174,7 @@ class DailyHistUpdater:
 
         logger.debug(f'[{i + 1}/{self.total_num}] finish downloading {name}: {code}, '
                      f'time elapsed = %.2fs' % (time.time() - start_time))
-
-    def update(self, df, workers=1):
-        if workers > 1:
-            self.multi_process(df, fn=self.update_daily_hist)
-        else:
-            self.process(df, fn=self.update_daily_hist)
+        return 1
 
 
     @timeit
@@ -186,11 +220,25 @@ class DailyHistUpdater:
                         process_num += 1
                         time_per_item = (time.time() - start_time) / process_num
                         if time.time() - last_print_time > self.print_gap:
-                            logger.info(f'process_num = {process_num}/{self.total_num}, '
+                            logger.info(f'process_num/total_num = {process_num}/{self.total_num}, '
                                         f'time_per_item = {time_per_item}')
                             last_print_time = time.time()
                 except Exception as exc:
                     logger.error(f"发生异常: {exc}")
+
+
+    def update(self, df, workers=1):
+        if workers > 1:
+            self.multi_process(df, fn=self.update_daily_hist)
+        else:
+            self.process(df, fn=self.update_daily_hist)
+
+
+    def download(self, df, workers=1):
+        if workers > 1:
+            self.multi_process(df, fn=self.download_daily_hist)
+        else:
+            self.process(df, fn=self.download_daily_hist)
 
 
 # process(df_stock, fn=update_daily_hist)
