@@ -21,6 +21,9 @@ class Logger:
     def __init__(self, log_level=Log.INFO):
         self.log_level = Log(log_level)
 
+    def set_log_level(self, log_level):
+        self.log_level = Log(log_level)
+
     def print(self, msg, log_level=Log.INFO):
         if Log(log_level).value >= self.log_level.value:
             print(msg)

@@ -53,8 +53,7 @@ class DailyHistUpdater:
 
 
     def log_level(self, level):
-        self.logger.log_level = level
-
+        self.logger.set_log_level(level)
 
     def get_succ_list(self):
         succ_list = []
@@ -228,6 +227,8 @@ class DailyHistUpdater:
 
 
     def update(self, df, workers=1):
+        #  worker = 10, stock_num = 907, days = 1, time = 11.4 min
+        #  worker = 1, stock_num = 894, days = 1, time = 16.59 min
         if workers > 1:
             self.multi_process(df, fn=self.update_daily_hist)
         else:
