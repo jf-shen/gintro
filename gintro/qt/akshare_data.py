@@ -9,7 +9,7 @@ from google.protobuf.service import RpcException
 
 import gintro.date as gd
 from gintro import timeit
-from .basic import Logger
+from .log import Logger
 
 
 # get stock pool
@@ -227,8 +227,9 @@ class DailyHistUpdater:
 
 
     def update(self, df, workers=1):
-        #  worker = 10, stock_num = 907, days = 1, time = 11.4 min
-        #  worker = 1, stock_num = 894, days = 1, time = 16.59 min
+        # worker = 10, stock_num = 907, days = 1, time = 11.4 min
+        # worker = 1, stock_num = 864, days = 1, time = 16.59 min
+        # worker = 1, stock_num = 880, days =
         if workers > 1:
             self.multi_process(df, fn=self.update_daily_hist)
         else:

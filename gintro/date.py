@@ -34,6 +34,10 @@ def date_plus(date_str, days):
     return to_str(res_date)
 
 
+def date_minus(date_str, days):
+    return date_plus(date_str, -days)
+
+
 def today(sep=''):
     return to_str(datetime.datetime.today(), sep)
 

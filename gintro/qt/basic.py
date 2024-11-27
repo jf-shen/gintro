@@ -1,6 +1,6 @@
 from chinese_calendar import is_workday
 from datetime import datetime
-from enum import Enum
+import pandas as pd
 
 
 def is_trade_day(date):
@@ -10,35 +10,27 @@ def is_trade_day(date):
     return False
 
 
-class Log(Enum):
-    DEBUG = 0
-    INFO = 1
-    WARNING = 2
-    ERROR = 3
+def shift_join(df, fields, shift, shift_by='date', prefix=None):
+    """
+    :param df: a pandas data frame
+    :param fields: a list
+    :param shift: int
+    :param shift_by: a column in df
+    :param prefix: prefix for names of shifted fields
+    :return: df with shifted field
+    """
+    df = df.sort_values(by=shift_by, ascending=True)
+    df['index'] = list(range(df.shape[0]))
+    dff = df[fields + ['index']].copy()
+    dff['index'] = dff['index'] - shift
 
+    def _rename(field):
+        if prefix is None:
+            return f'{field}_{shift}'
+        else:
+            return f'{prefix}_{field}_{shift}'
 
-class Logger:
-    def __init__(self, log_level=Log.INFO):
-        self.log_level = Log(log_level)
-
-    def set_log_level(self, log_level):
-        self.log_level = Log(log_level)
-
-    def print(self, msg, log_level=Log.INFO):
-        if Log(log_level).value >= self.log_level.value:
-            print(msg)
-
-    def debug(self, msg):
-        self.print('[DEBUG] ' + msg, log_level=Log.DEBUG)
-
-    def info(self, msg):
-        self.print('[INFO] ' + msg, log_level=Log.INFO)
-
-    def warn(self, msg):
-        self.print('[WARNING]' + msg, log_level=Log.WARNING)
-
-    def error(self, msg):
-        self.print('[ERROR] ' + msg, log_level=Log.ERROR)
-
-
-
+    rename_dict = {field: _rename(field) for field in fields}
+    dff = dff.rename(columns=rename_dict)
+    df = df.merge(dff, how='left', on='index')
+    return df
