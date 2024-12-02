@@ -7,15 +7,17 @@ class FeatureGenerator:
     """
 
     def __init__(self,
-                 past_fields=['open', 'close', 'high', 'low', 'amount'],
-                 past_dts=[-i for i in range(10)][::-1],
-                 future_dts=[1, 2, 3, 5, 10],
-                 future_fields=['open', 'close', 'high', 'low']
+                 past_fields,    # = ['open', 'close', 'high', 'low', 'amount'],
+                 past_dts,       # = [-i for i in range(10)][::-1],
+                 future_dts,     # = [1, 2, 3, 5, 10],
+                 future_fields,  # = ['open', 'close', 'high', 'low']
                 ):
         self.past_fields = past_fields
         self.future_fields = future_fields
         self.past_dts = past_dts
         self.future_dts = future_dts
+
+        self.fea_tuple = None
 
 
     def make_label_plan(self):
@@ -32,7 +34,7 @@ class FeatureGenerator:
 
     def make_fea_plan(self):
         past_dts = self.past_dts
-        fields = self.future_fields
+        fields = self.past_fields
         fea_tuple = []
         for last_dt, dt in zip(past_dts[:-1], past_dts[1:]):
             for field in fields:
