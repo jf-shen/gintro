@@ -34,3 +34,5 @@ def shift_join(df, fields, shift, shift_by='date', prefix=None):
     dff = dff.rename(columns=rename_dict)
     df = df.merge(dff, how='left', on='index')
     return df
+
+
