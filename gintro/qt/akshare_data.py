@@ -4,9 +4,6 @@ import threading
 import pandas as pd
 import time
 import os
-
-from google.protobuf.service import RpcException
-
 import gintro.date as gd
 from gintro import timeit
 from .log import Logger
@@ -149,7 +146,7 @@ class DailyHistUpdater:
                 adjust="qfq"
             )
         except Exception as e:
-            raise RpcException(f'[akshare error] symbol = {symbol}, start_date = {start_date}, '
+            raise ConnectionError(f'[akshare error] symbol = {symbol}, start_date = {start_date}, '
                                f'end_date = {end_date}, Exception = {e}')
 
         df_incr['code'] = code
@@ -178,6 +175,11 @@ class DailyHistUpdater:
 
     @timeit
     def process(self, df, fn):
+        """
+        :param df:
+        :param fn: (i, row) --> status_code (-1 = fail)
+        """
+
         start_time = time.time()
         last_print_time = start_time
 
@@ -200,6 +202,11 @@ class DailyHistUpdater:
 
     @timeit
     def multi_process(self, df, fn, max_workers=10):
+        """
+        :param df:
+        :param fn: (i, row) --> status_code (-1 = fail)
+        :param max_workers: number of threads
+        """
         start_time = time.time()
         last_print_time = start_time
         logger = self.logger
@@ -229,7 +236,6 @@ class DailyHistUpdater:
     def update(self, df, workers=1):
         # worker = 10, stock_num = 907, days = 1, time = 11.4 min
         # worker = 1, stock_num = 864, days = 1, time = 16.59 min
-        # worker = 1, stock_num = 880, days =
         if workers > 1:
             self.multi_process(df, fn=self.update_daily_hist)
         else:
