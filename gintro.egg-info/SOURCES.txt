@@ -2,6 +2,7 @@ LICENSE
 README.md
 setup.py
 gintro/__init__.py
+gintro/basic.py
 gintro/date.py
 gintro/decorators.py
 gintro/mail.py
