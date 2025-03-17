@@ -25,6 +25,21 @@ def get_auc(pred, label):
 
 
 
+def batch(iter, batch_size=8):
+    res = []
+    size = 0
+    for i, e in enumerate(iter):
+        res.append(e)
+        size += 1
+        if size >= batch_size:
+            yield res
+            res = []
+            size = 0
+    if size > 0:
+        yield res
 
-
+if __name__ == '__main__':
+    a = range(20)
+    for b in batch(a):
+        print(b)
 
