@@ -25,10 +25,10 @@ def get_auc(pred, label):
 
 
 
-def batch(iter, batch_size=8):
+def batch(iterable, batch_size=8):
     res = []
     size = 0
-    for i, e in enumerate(iter):
+    for i, e in enumerate(iterable):
         res.append(e)
         size += 1
         if size >= batch_size:
